@@ -1,9 +1,44 @@
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 
-import librosa
-import librosa.display
+
+def plot_label_frequency(df_label, log=True, ax=None):
+    if ax is None:
+        _, ax = plt.subplots(figsize=(10, 4))
+
+    label_freq = df_label.mean()
+    label_freq.plot(kind="bar", ax=ax)
+    if log:
+        ax.set_yscale("log")
+    ax.set_title("Label frequency" + " (log scale)" if log else "")
+    ax.set_ylabel("P(label = 1)")
+    ax.tick_params(axis="x", labelrotation=45)
+
+
+def plot_active_labels(df_label, ax=None):
+    if ax is None:
+        _, ax = plt.subplots(figsize=(10, 7))
+
+    row_counts = df_label.sum(axis=1)
+    ax.hist(row_counts, bins=range(int(row_counts.max()) + 2), align="left")
+    ax.set_title("Number of active labels per sample")
+    ax.set_xlabel("labels per sample")
+    ax.set_ylabel("count")
+
+
+def plot_label_concurrence(df_label, normalize=True, ax=None):
+    if ax is None:
+        _, ax = plt.subplots(figsize=(8, 6))
+
+    cooc = df_label.T.dot(df_label)
+    if normalize:
+        diag = np.diag(cooc)
+        union = diag[:, None] + diag[None, :] - cooc
+        cooc /= union
+
+    sns.heatmap(cooc, cmap="viridis", ax=ax)
+    ax.set_title("Label co-occurrence matrix" + " (normalized)" if normalize else "")
 
 
 def plot_spectrogram(S_db, frequencies, times, ax=None, title=None):

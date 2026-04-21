@@ -1,10 +1,9 @@
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import librosa
 
-from sklearn.preprocessing import MultiLabelBinarizer
+import pickle
 
 DATA_DIR = Path("../data")
 TRAIN_METADATA_FILE = Path("train.csv")
@@ -15,6 +14,8 @@ TRAIN_AUDIO_DIR = Path("train_audio")
 TRAIN_SOUNDSCAPES_AUDIO_DIR = Path("train_soundscapes")
 
 TEST_SOUNDSCAPES_AUDIO_DIR = Path("test_soundscapes")
+
+RESULTS_DIR = Path("../results")
 
 SR = 35000  # 32kHz
 
@@ -65,31 +66,11 @@ def load_audio(row: pd.Series, train=True):
         return load_train_audio(row["filename"])
 
 
-def get_labels(df, df_taxonomy):
-    
-    class_encoder = MultiLabelBinarizer()
-    primary_encoder = MultiLabelBinarizer()
+def save_results(result, out_dir, fname):
+    with open(RESULTS_DIR / out_dir / f"{fname}.pkl", "wb") as file:
+        pickle.dump(result, file)
 
-    class_encoder.fit(df_taxonomy["class_name"].apply(lambda x: [x]))
-    primary_encoder.fit(df_taxonomy["primary_label"].apply(lambda x: [x]))
 
-    primary_to_class = df_taxonomy.set_index("primary_label")["class_name"]
-    
-    # TODO: and secondary labels? - completely ignore them?
-    if is_soundscape(df):
-        y_class = class_encoder.transform(
-            df["primary_label"]
-            .apply(lambda x: x.split(";"))
-            .apply(
-                lambda x: list({primary_to_class[primary_label] for primary_label in x})
-            )
-        )
-
-        y_primary = primary_encoder.transform(
-            df["primary_label"].apply(lambda x: x.split(";"))
-        )
-    else:
-        y_class = class_encoder.transform(df["class_name"].apply(lambda x: [x]))
-        y_primary = primary_encoder.transform(df["primary_label"].apply(lambda x: [x]))
-
-    return y_class, y_primary
+def load_results(out_dir, fname):
+    with open(RESULTS_DIR / out_dir / f"{fname}.pkl", "rb") as file:
+        return pickle.load(file)
